@@ -4,14 +4,27 @@ const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const puppeteer = require('puppeteer');
 
-// ─── Redis Connection ─────────────────────────────────────────────────────────
-// Automatically connects to Railway's Redis if REDIS_URL exists, otherwise uses localhost for local testing
-const connection = process.env.REDIS_URL
-  ? new Redis(process.env.REDIS_URL, {
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false,
-    family: 0 // Crucial for Railway.app IPv6 Redis support
-  })
+// ─── Cloud Infrastructure Redis Connection ──────────────────────────────────────
+const redisUrl = process.env.REDIS_URL;
+const redisOptions = {
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false
+};
+
+if (redisUrl) {
+  // Railway private network runs strictly on IPv6 logic
+  if (redisUrl.includes('.railway.internal')) {
+    redisOptions.family = 6;
+  }
+
+  // Public/External Cloud URLs often mandate TLS/SSL verification
+  if (redisUrl.startsWith('rediss://')) {
+    redisOptions.tls = { rejectUnauthorized: false };
+  }
+}
+
+const connection = redisUrl
+  ? new Redis(redisUrl, redisOptions)
   : new Redis({
     host: '127.0.0.1',
     port: 6379,
