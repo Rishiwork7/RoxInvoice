@@ -12,9 +12,9 @@ const redisOptions = {
 };
 
 if (redisUrl) {
-  // Railway private network runs strictly on IPv6 logic
+  // Railway private network resolution (Removed 'family: 6' because it breaks Node ENOTFOUND dns lookup)
   if (redisUrl.includes('.railway.internal')) {
-    redisOptions.family = 6;
+    // Railway natively handles routing; do not force IPv6 at the TCP socket layer.
   }
 
   // Public/External Cloud URLs often mandate TLS/SSL verification
