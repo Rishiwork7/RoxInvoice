@@ -5,11 +5,17 @@ const crypto = require('crypto');
 const puppeteer = require('puppeteer');
 
 // ─── Redis Connection ─────────────────────────────────────────────────────────
-const connection = new Redis({
-  host: '127.0.0.1',
-  port: 6379,
-  maxRetriesPerRequest: null,
-});
+// Automatically connects to Railway's Redis if REDIS_URL exists, otherwise uses localhost for local testing
+const connection = process.env.REDIS_URL
+  ? new Redis(process.env.REDIS_URL, {
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false
+  })
+  : new Redis({
+    host: '127.0.0.1',
+    port: 6379,
+    maxRetriesPerRequest: null
+  });
 
 const invoiceQueue = new Queue('invoice-queue', { connection });
 
