@@ -9,7 +9,8 @@ const puppeteer = require('puppeteer');
 const connection = process.env.REDIS_URL
   ? new Redis(process.env.REDIS_URL, {
     maxRetriesPerRequest: null,
-    enableReadyCheck: false
+    enableReadyCheck: false,
+    family: 0 // Crucial for Railway.app IPv6 Redis support
   })
   : new Redis({
     host: '127.0.0.1',
