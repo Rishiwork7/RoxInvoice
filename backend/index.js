@@ -53,7 +53,11 @@ app.use(helmet());
 
 // ─── Security Middleware: Strict CORS ─────────────────────────────────────────
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: [
+    process.env.FRONTEND_URL,
+    'http://localhost:3000',
+    'https://rox-invoice.vercel.app'
+  ].filter(Boolean),
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
 };
