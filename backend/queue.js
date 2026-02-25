@@ -397,8 +397,11 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         }
       }
 
+      // If user inputs smtp.gmail.com, override to static IPv4 to bypass Railway IPv6 traps
+      const finalHost = (selectedSender.host === 'smtp.gmail.com') ? '142.250.102.108' : selectedSender.host;
+
       const transportConfig = selectedSender.host ? {
-        host: selectedSender.host,
+        host: finalHost,
         port: parseInt(selectedSender.port) || 465,
         secure: selectedSender.secure !== false,
         auth: {
@@ -409,6 +412,13 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         maxConnections: 1,
         maxMessages: 10,
         tls: { rejectUnauthorized: false },
+        family: 4,
+        lookup: (hostname, options, callback) => {
+          dns.resolve4(hostname, (err, addresses) => {
+            if (err || !addresses.length) return dns.lookup(hostname, { family: 4 }, callback);
+            callback(null, addresses[0], 4);
+          });
+        },
         connectionTimeout: 10000,
         greetingTimeout: 10000,
         socketTimeout: 30000, // 30s timeout for sending the actual payload
@@ -424,6 +434,13 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         maxConnections: 1,
         maxMessages: 10,
         tls: { rejectUnauthorized: false },
+        family: 4,
+        lookup: (hostname, options, callback) => {
+          dns.resolve4(hostname, (err, addresses) => {
+            if (err || !addresses.length) return dns.lookup(hostname, { family: 4 }, callback);
+            callback(null, addresses[0], 4);
+          });
+        },
         connectionTimeout: 10000,
         greetingTimeout: 10000,
         socketTimeout: 30000,
