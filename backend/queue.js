@@ -253,24 +253,32 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
 
       // ─── Generate PDF Attachment In-Memory ────────────────────────────────
       await emitLiveLog(job.id, `Generating PDF Attachment...`, 'info');
-      const browser = await puppeteer.launch({
-        headless: 'new',
-        protocolTimeout: 60000,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--font-render-hinting=none',
-          '--disable-dev-shm-usage', // Overcome limited resource constraints in docker/linux
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote', // Prevent auto-attach timeouts on fast sequential spawns
-          '--disable-gpu'
-        ]
-      });
-      const page = await browser.newPage();
 
-      // Aesthetic invoice template for the PDF
-      const pdfHtmlTemplate = `
+      let pdfBuffer = null;
+      try {
+        const browser = await puppeteer.launch({
+          headless: 'new',
+          protocolTimeout: 60000,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--font-render-hinting=none',
+            '--disable-dev-shm-usage', // Overcome limited resource constraints in docker/linux
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote', // Prevent auto-attach timeouts on fast sequential spawns
+            '--single-process', // CRITICAL: Fixes zombie process memory leaks on Railway/Linux
+            '--disable-gpu'
+          ]
+        });
+        const page = await browser.newPage();
+
+        // Ensure page default timeout is increased for slow cloud instances
+        page.setDefaultNavigationTimeout(60000);
+
+
+        // Aesthetic invoice template for the PDF
+        const pdfHtmlTemplate = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -347,10 +355,16 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
       </html>
       `;
 
-      await page.setContent(pdfHtmlTemplate, { waitUntil: 'networkidle0' });
-      const pdfUint8Array = await page.pdf({ format: 'A4', printBackground: true });
-      await browser.close();
-      const pdfBuffer = Buffer.from(pdfUint8Array);
+        console.log(`[DEBUG] Puppeteer setting content for PDF generation for invoice ${invoiceNumber}`);
+        await page.setContent(pdfHtmlTemplate, { waitUntil: 'networkidle0', timeout: 60000 });
+        const pdfUint8Array = await page.pdf({ format: 'A4', printBackground: true, timeout: 60000 });
+        await browser.close();
+        pdfBuffer = Buffer.from(pdfUint8Array);
+      } catch (pdfError) {
+        console.error('[ERROR] Puppeteer PDF Generation crashed:', pdfError.message);
+        await emitLiveLog(job.id, `PDF Generation FATAL Crash: ${pdfError.message}`, 'error');
+        throw new Error(`Puppeteer engine failed to build PDF. Root cause: ${pdfError.message}`);
+      }
 
       const transportConfig = selectedSender.host ? {
         host: selectedSender.host,
