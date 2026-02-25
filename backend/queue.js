@@ -427,7 +427,7 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         maxConnections: 1,
         maxMessages: 10,
         tls: { rejectUnauthorized: false },
-        family: process.env.SMTP_IP_FAMILY ? parseInt(process.env.SMTP_IP_FAMILY) : 4,
+        family: process.env.SMTP_IP_FAMILY ? parseInt(process.env.SMTP_IP_FAMILY) : undefined,
         connectionTimeout: 10000,
         greetingTimeout: 10000,
         socketTimeout: 30000,
