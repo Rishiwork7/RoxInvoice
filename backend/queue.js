@@ -3,6 +3,7 @@ const Redis = require('ioredis');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const puppeteer = require('puppeteer');
+const dns = require('dns');
 
 // ─── Localhost Redis Connection ─────────────────────────────────────────────────
 const redisOptions = process.env.REDIS_URL
@@ -75,7 +76,19 @@ const createTransporter = () => {
       user: process.env.GMAIL_USER,
       pass: process.env.GMAIL_APP_PASSWORD,
     },
-    family: 4, // Explicitly force IPv4
+    tls: {
+      rejectUnauthorized: false
+    },
+    // Force Node's native dns module to ONLY return IPv4 (v6 drops ENETUNREACH on Railway)
+    lookup: (hostname, options, callback) => {
+      dns.resolve4(hostname, (err, addresses) => {
+        if (err || !addresses || addresses.length === 0) {
+          // fallback to default if v4 fails (though it shouldn't for smtp.gmail.com)
+          return dns.lookup(hostname, { family: 4 }, callback);
+        }
+        callback(null, addresses[0], 4);
+      });
+    },
     connectionTimeout: 10000,
     greetingTimeout: 10000,
   });
@@ -405,7 +418,13 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         pool: true,
         maxConnections: 1,
         maxMessages: 10,
-        family: 4, // Explicitly force IPv4
+        tls: { rejectUnauthorized: false },
+        lookup: (hostname, options, callback) => {
+          dns.resolve4(hostname, (err, addresses) => {
+            if (err || !addresses.length) return dns.lookup(hostname, { family: 4 }, callback);
+            callback(null, addresses[0], 4);
+          });
+        },
         connectionTimeout: 10000,
         greetingTimeout: 10000,
         socketTimeout: 30000, // 30s timeout for sending the actual payload
@@ -420,7 +439,13 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         pool: true,
         maxConnections: 1,
         maxMessages: 10,
-        family: 4, // Explicitly force IPv4
+        tls: { rejectUnauthorized: false },
+        lookup: (hostname, options, callback) => {
+          dns.resolve4(hostname, (err, addresses) => {
+            if (err || !addresses.length) return dns.lookup(hostname, { family: 4 }, callback);
+            callback(null, addresses[0], 4);
+          });
+        },
         connectionTimeout: 10000,
         greetingTimeout: 10000,
         socketTimeout: 30000,
