@@ -267,11 +267,12 @@ app.get('/api/invoice/:id', async (req, res) => {
 
 // Generate dynamic PDF Preview for the frontend
 app.post('/api/preview-pdf', async (req, res) => {
+  let browser = null;
   try {
     const { invoiceDetails, recipient } = req.body;
     const invoiceNumber = 'INV-PREVIEW-123';
 
-    const browser = await puppeteer.launch({
+    browser = await puppeteer.launch({
       headless: 'new',
       args: [
         '--no-sandbox',
@@ -281,6 +282,20 @@ app.post('/api/preview-pdf', async (req, res) => {
       ]
     });
     const page = await browser.newPage();
+
+    // --- X-Ray Logging & Resource Blocking ---
+    page.on('requestfailed', req => console.log('[X-RAY] Failed:', req.url(), req.failure()?.errorText));
+    await page.setRequestInterception(true);
+    page.on('request', req => {
+      console.log('[X-RAY] Loading:', req.url());
+      const blocked = ['script', 'media', 'font', 'websocket', 'manifest', 'other', 'fetch', 'xhr'];
+      if (blocked.includes(req.resourceType())) {
+        req.abort();
+      } else {
+        req.continue();
+      }
+    });
+    // -----------------------------------------
 
     // Aesthetic invoice template for the PDF preview (MUST MATCH queue.js EXACTLY)
     const pdfHtmlTemplate = `
@@ -360,15 +375,18 @@ app.post('/api/preview-pdf', async (req, res) => {
       </html>
     `;
 
-    await page.setContent(pdfHtmlTemplate, { waitUntil: 'networkidle0' });
-    const pdfUint8Array = await page.pdf({ format: 'A4', printBackground: true });
-    await browser.close();
+    await page.setContent(pdfHtmlTemplate, { waitUntil: 'load', timeout: 60000 });
+    const pdfUint8Array = await page.pdf({ format: 'A4', printBackground: true, timeout: 60000 });
     const pdfBuffer = Buffer.from(pdfUint8Array);
 
     res.json({ success: true, pdfBase64: pdfBuffer.toString('base64') });
   } catch (error) {
     console.error(`Error generating PDF preview:`, error);
     res.status(500).json({ error: 'Failed to generate PDF preview' });
+  } finally {
+    if (browser) {
+      await browser.close().catch(e => console.error('[ERROR] Failed to close browser:', e));
+    }
   }
 });
 

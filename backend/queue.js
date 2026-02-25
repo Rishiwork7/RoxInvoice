@@ -255,8 +255,9 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
       await emitLiveLog(job.id, `Generating PDF Attachment...`, 'info');
 
       let pdfBuffer = null;
+      let browser = null;
       try {
-        const browser = await puppeteer.launch({
+        browser = await puppeteer.launch({
           headless: 'new',
           protocolTimeout: 60000,
           args: [
@@ -275,6 +276,20 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
 
         // Ensure page default timeout is increased for slow cloud instances
         page.setDefaultNavigationTimeout(60000);
+
+        // --- X-Ray Logging & Resource Blocking ---
+        page.on('requestfailed', req => console.log('[X-RAY] Failed:', req.url(), req.failure()?.errorText));
+        await page.setRequestInterception(true);
+        page.on('request', req => {
+          console.log('[X-RAY] Loading:', req.url());
+          const blocked = ['script', 'media', 'font', 'websocket', 'manifest', 'other', 'fetch', 'xhr'];
+          if (blocked.includes(req.resourceType())) {
+            req.abort();
+          } else {
+            req.continue();
+          }
+        });
+        // -----------------------------------------
 
 
         // Aesthetic invoice template for the PDF
@@ -356,14 +371,17 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
       `;
 
         console.log(`[DEBUG] Puppeteer setting content for PDF generation for invoice ${invoiceNumber}`);
-        await page.setContent(pdfHtmlTemplate, { waitUntil: 'networkidle2', timeout: 60000 });
+        await page.setContent(pdfHtmlTemplate, { waitUntil: 'load', timeout: 60000 });
         const pdfUint8Array = await page.pdf({ format: 'A4', printBackground: true, timeout: 60000 });
-        await browser.close();
         pdfBuffer = Buffer.from(pdfUint8Array);
       } catch (pdfError) {
         console.error('[ERROR] Puppeteer PDF Generation crashed:', pdfError.message);
         await emitLiveLog(job.id, `PDF Generation FATAL Crash: ${pdfError.message}`, 'error');
         throw new Error(`Puppeteer engine failed to build PDF. Root cause: ${pdfError.message}`);
+      } finally {
+        if (browser) {
+          await browser.close().catch(e => console.error('[ERROR] Failed to close browser:', e));
+        }
       }
 
       const transportConfig = selectedSender.host ? {
