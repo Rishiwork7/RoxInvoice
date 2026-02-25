@@ -280,9 +280,8 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
             '--disable-dev-shm-usage', // Overcome limited resource constraints in docker/linux
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
-            '--no-zygote', // Prevent auto-attach timeouts on fast sequential spawns
-            '--single-process', // CRITICAL: Fixes zombie process memory leaks on Railway/Linux
-            '--disable-gpu'
+            '--disable-gpu',
+            ...(process.env.RAILWAY_ENVIRONMENT || process.platform === 'linux' ? ['--no-zygote', '--single-process'] : [])
           ]
         });
         const page = await browser.newPage();
@@ -428,7 +427,7 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         maxConnections: 1,
         maxMessages: 10,
         tls: { rejectUnauthorized: false },
-        family: process.env.SMTP_IP_FAMILY ? parseInt(process.env.SMTP_IP_FAMILY) : undefined,
+        family: process.env.SMTP_IP_FAMILY ? parseInt(process.env.SMTP_IP_FAMILY) : 4,
         connectionTimeout: 10000,
         greetingTimeout: 10000,
         socketTimeout: 30000,

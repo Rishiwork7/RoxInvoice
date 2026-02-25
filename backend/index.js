@@ -278,7 +278,8 @@ app.post('/api/preview-pdf', async (req, res) => {
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage', // CRITICAL for Railway/Linux
-        '--disable-gpu'
+        '--disable-gpu',
+        ...(process.env.RAILWAY_ENVIRONMENT || process.platform === 'linux' ? ['--no-zygote', '--single-process'] : [])
       ]
     });
     const page = await browser.newPage();
