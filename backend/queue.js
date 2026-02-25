@@ -412,15 +412,7 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         maxConnections: 1,
         maxMessages: 10,
         tls: { rejectUnauthorized: false },
-        family: 4,
-        logger: true,
-        debug: true,
-        lookup: (hostname, options, callback) => {
-          dns.resolve4(hostname, (err, addresses) => {
-            if (err || !addresses.length) return dns.lookup(hostname, { family: 4 }, callback);
-            callback(null, addresses[0], 4);
-          });
-        },
+        family: process.env.SMTP_IP_FAMILY ? parseInt(process.env.SMTP_IP_FAMILY) : undefined,
         connectionTimeout: 10000,
         greetingTimeout: 10000,
         socketTimeout: 30000, // 30s timeout for sending the actual payload
@@ -436,15 +428,7 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         maxConnections: 1,
         maxMessages: 10,
         tls: { rejectUnauthorized: false },
-        family: 4,
-        logger: true,
-        debug: true,
-        lookup: (hostname, options, callback) => {
-          dns.resolve4(hostname, (err, addresses) => {
-            if (err || !addresses.length) return dns.lookup(hostname, { family: 4 }, callback);
-            callback(null, addresses[0], 4);
-          });
-        },
+        family: process.env.SMTP_IP_FAMILY ? parseInt(process.env.SMTP_IP_FAMILY) : undefined,
         connectionTimeout: 10000,
         greetingTimeout: 10000,
         socketTimeout: 30000,
