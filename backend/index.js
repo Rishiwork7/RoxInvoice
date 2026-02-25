@@ -246,7 +246,12 @@ app.post('/api/preview-pdf', async (req, res) => {
 
     const browser = await puppeteer.launch({
       headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage', // CRITICAL for Railway/Linux
+        '--disable-gpu'
+      ]
     });
     const page = await browser.newPage();
 

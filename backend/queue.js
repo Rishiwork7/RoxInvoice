@@ -4,32 +4,14 @@ const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const puppeteer = require('puppeteer');
 
-// ─── Cloud Infrastructure Redis Connection ──────────────────────────────────────
-const redisUrl = process.env.REDIS_URL;
-const redisOptions = {
-  maxRetriesPerRequest: null,
-  enableReadyCheck: false
-};
+// ─── Localhost Redis Connection ─────────────────────────────────────────────────
+const redisOptions = process.env.REDIS_URL
+  ? { tls: { rejectUnauthorized: false }, maxRetriesPerRequest: null }
+  : { host: '127.0.0.1', port: 6379, maxRetriesPerRequest: null };
 
-if (redisUrl) {
-  // Railway private network resolution (Removed 'family: 6' because it breaks Node ENOTFOUND dns lookup)
-  if (redisUrl.includes('.railway.internal')) {
-    // Railway natively handles routing; do not force IPv6 at the TCP socket layer.
-  }
-
-  // Public/External Cloud URLs often mandate TLS/SSL verification
-  if (redisUrl.startsWith('rediss://')) {
-    redisOptions.tls = { rejectUnauthorized: false };
-  }
-}
-
-const connection = redisUrl
-  ? new Redis(redisUrl, redisOptions)
-  : new Redis({
-    host: '127.0.0.1',
-    port: 6379,
-    maxRetriesPerRequest: null
-  });
+const connection = process.env.REDIS_URL
+  ? new Redis(process.env.REDIS_URL, redisOptions)
+  : new Redis(redisOptions);
 
 const invoiceQueue = new Queue('invoice-queue', { connection });
 

@@ -19,7 +19,8 @@ export default function InvoiceViewer({ params }: { params: Promise<{ id: string
                 setStatusText('Connecting to Encrypted Node...');
 
                 // Fetch the actual PDF URL from the backend
-                const res = await fetch(`http://localhost:5001/api/invoice/${invoiceId}`);
+                const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+                const res = await fetch(`${BACKEND_URL}/api/invoice/${invoiceId}`);
                 const data = await res.json();
 
                 if (res.ok && data.success && data.pdfBase64) {

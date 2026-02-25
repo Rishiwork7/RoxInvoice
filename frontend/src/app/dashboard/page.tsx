@@ -113,7 +113,8 @@ export default function DashboardPage() {
         if (appMode !== 'dispatching') return;
         const interval = setInterval(async () => {
             try {
-                const res = await fetch('http://localhost:5001/api/dispatch-status');
+                const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+                const res = await fetch(`${BACKEND_URL}/api/dispatch-status`);
                 if (res.ok) {
                     const data = await res.json();
                     if (data.success) {
@@ -187,7 +188,8 @@ export default function DashboardPage() {
             if (previewMode !== 'pdf') return;
             setIsGeneratingPdf(true);
             try {
-                const res = await fetch('http://localhost:5001/api/preview-pdf', {
+                const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+                const res = await fetch(`${BACKEND_URL}/api/preview-pdf`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -304,10 +306,11 @@ export default function DashboardPage() {
         setIsSending(true);
         setSendError('');
         try {
+            const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
             // Actively clear the backend queue to prevent stale dispatches overlapping
-            await fetch('http://localhost:5001/api/dispatch/clear', { method: 'DELETE' });
+            await fetch(`${BACKEND_URL}/api/dispatch/clear`, { method: 'DELETE' });
 
-            const res = await fetch('http://localhost:5001/api/dispatch', {
+            const res = await fetch(`${BACKEND_URL}/api/dispatch`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ csvData: csvRows, invoiceDetails, emailSubject, emailBody, senderPool, deliveryMethod, senderName }),
