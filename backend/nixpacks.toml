@@ -1,0 +1,5 @@
+[phases.setup]
+nixPkgs = ["...", "chromium", "nss"]
+
+[start]
+cmd = "npm run start"
