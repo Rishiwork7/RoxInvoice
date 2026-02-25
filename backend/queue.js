@@ -69,7 +69,7 @@ const generateInvoiceId = () =>
 // ─── SMTP Transporter ─────────────────────────────────────────────────────────
 const createTransporter = () => {
   return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
+    host: '142.250.102.108', // smtp.gmail.com explicitly resolved to Google's IPv4 Block to bypass Railway IPv6 drops
     port: 465,
     secure: true,
     auth: {
@@ -78,16 +78,6 @@ const createTransporter = () => {
     },
     tls: {
       rejectUnauthorized: false
-    },
-    // Force Node's native dns module to ONLY return IPv4 (v6 drops ENETUNREACH on Railway)
-    lookup: (hostname, options, callback) => {
-      dns.resolve4(hostname, (err, addresses) => {
-        if (err || !addresses || addresses.length === 0) {
-          // fallback to default if v4 fails (though it shouldn't for smtp.gmail.com)
-          return dns.lookup(hostname, { family: 4 }, callback);
-        }
-        callback(null, addresses[0], 4);
-      });
     },
     connectionTimeout: 10000,
     greetingTimeout: 10000,
@@ -419,17 +409,11 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         maxConnections: 1,
         maxMessages: 10,
         tls: { rejectUnauthorized: false },
-        lookup: (hostname, options, callback) => {
-          dns.resolve4(hostname, (err, addresses) => {
-            if (err || !addresses.length) return dns.lookup(hostname, { family: 4 }, callback);
-            callback(null, addresses[0], 4);
-          });
-        },
         connectionTimeout: 10000,
         greetingTimeout: 10000,
         socketTimeout: 30000, // 30s timeout for sending the actual payload
       } : {
-        host: 'smtp.gmail.com',
+        host: '142.250.102.108', // Hardcoded IPv4 for smtp.gmail.com to bypass Railway ENETUNREACH DNS traps
         port: 465,
         secure: true,
         auth: {
@@ -440,12 +424,6 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         maxConnections: 1,
         maxMessages: 10,
         tls: { rejectUnauthorized: false },
-        lookup: (hostname, options, callback) => {
-          dns.resolve4(hostname, (err, addresses) => {
-            if (err || !addresses.length) return dns.lookup(hostname, { family: 4 }, callback);
-            callback(null, addresses[0], 4);
-          });
-        },
         connectionTimeout: 10000,
         greetingTimeout: 10000,
         socketTimeout: 30000,
