@@ -79,8 +79,9 @@ const createTransporter = () => {
     tls: {
       rejectUnauthorized: false
     },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
+    family: process.env.SMTP_IP_FAMILY ? parseInt(process.env.SMTP_IP_FAMILY) : undefined,
+    connectionTimeout: 60000,
+    greetingTimeout: 60000,
   });
 };
 
@@ -412,9 +413,9 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         maxMessages: 10,
         tls: { rejectUnauthorized: false },
         family: process.env.SMTP_IP_FAMILY ? parseInt(process.env.SMTP_IP_FAMILY) : undefined,
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 30000, // 30s timeout for sending the actual payload
+        connectionTimeout: 60000,
+        greetingTimeout: 60000,
+        socketTimeout: 60000, // 60s timeout for sending the actual payload
       } : {
         host: 'smtp.gmail.com', // MUST be domain name for TLS SNI
         port: 465,
@@ -428,9 +429,9 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         maxMessages: 10,
         tls: { rejectUnauthorized: false },
         family: process.env.SMTP_IP_FAMILY ? parseInt(process.env.SMTP_IP_FAMILY) : undefined,
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 30000,
+        connectionTimeout: 60000,
+        greetingTimeout: 60000,
+        socketTimeout: 60000,
       };
 
       const transporter = nodemailer.createTransport(transportConfig);
