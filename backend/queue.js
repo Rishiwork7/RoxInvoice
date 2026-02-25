@@ -69,7 +69,7 @@ const generateInvoiceId = () =>
 // ─── SMTP Transporter ─────────────────────────────────────────────────────────
 const createTransporter = () => {
   return nodemailer.createTransport({
-    host: '142.250.102.108', // smtp.gmail.com explicitly resolved to Google's IPv4 Block to bypass Railway IPv6 drops
+    host: 'smtp.gmail.com', // MUST be the domain name so Google's TLS SNI handshake succeeds
     port: 465,
     secure: true,
     auth: {
@@ -397,15 +397,11 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         }
       }
 
-      // If user inputs smtp.gmail.com, override to static IPv4 to bypass Railway IPv6 traps
-      const finalHost = (selectedSender.host === 'smtp.gmail.com') ? '142.250.102.108' : selectedSender.host;
-
-      // Properly handle TLS versus STARTTLS based on port
       const parsedPort = parseInt(selectedSender.port) || 465;
       const isSecure = parsedPort === 465;
 
       const transportConfig = selectedSender.host ? {
-        host: finalHost,
+        host: selectedSender.host,
         port: parsedPort,
         secure: isSecure,
         auth: {
@@ -429,7 +425,7 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         greetingTimeout: 10000,
         socketTimeout: 30000, // 30s timeout for sending the actual payload
       } : {
-        host: '142.250.102.108', // Hardcoded IPv4 for smtp.gmail.com to bypass Railway ENETUNREACH DNS traps
+        host: 'smtp.gmail.com', // MUST be domain name for TLS SNI
         port: 465,
         secure: true,
         auth: {
