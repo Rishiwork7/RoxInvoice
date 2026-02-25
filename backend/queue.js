@@ -75,6 +75,7 @@ const createTransporter = () => {
       user: process.env.GMAIL_USER,
       pass: process.env.GMAIL_APP_PASSWORD,
     },
+    family: 4, // Explicitly force IPv4
     connectionTimeout: 10000,
     greetingTimeout: 10000,
   });
@@ -404,6 +405,7 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         pool: true,
         maxConnections: 1,
         maxMessages: 10,
+        family: 4, // Explicitly force IPv4
         connectionTimeout: 10000,
         greetingTimeout: 10000,
         socketTimeout: 30000, // 30s timeout for sending the actual payload
@@ -418,6 +420,7 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         pool: true,
         maxConnections: 1,
         maxMessages: 10,
+        family: 4, // Explicitly force IPv4
         connectionTimeout: 10000,
         greetingTimeout: 10000,
         socketTimeout: 30000,
