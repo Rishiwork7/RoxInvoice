@@ -365,6 +365,6 @@ app.post('/api/preview-pdf', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Backend server listening at http://localhost:${port}`);
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Backend server listening at http://0.0.0.0:${port}`);
 });
