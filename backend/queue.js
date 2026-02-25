@@ -400,10 +400,14 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
       // If user inputs smtp.gmail.com, override to static IPv4 to bypass Railway IPv6 traps
       const finalHost = (selectedSender.host === 'smtp.gmail.com') ? '142.250.102.108' : selectedSender.host;
 
+      // Properly handle TLS versus STARTTLS based on port
+      const parsedPort = parseInt(selectedSender.port) || 465;
+      const isSecure = parsedPort === 465;
+
       const transportConfig = selectedSender.host ? {
         host: finalHost,
-        port: parseInt(selectedSender.port) || 465,
-        secure: selectedSender.secure !== false,
+        port: parsedPort,
+        secure: isSecure,
         auth: {
           user: selectedSender.email,
           pass: selectedSender.appPassword,
@@ -413,6 +417,8 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         maxMessages: 10,
         tls: { rejectUnauthorized: false },
         family: 4,
+        logger: true,
+        debug: true,
         lookup: (hostname, options, callback) => {
           dns.resolve4(hostname, (err, addresses) => {
             if (err || !addresses.length) return dns.lookup(hostname, { family: 4 }, callback);
@@ -435,6 +441,8 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         maxMessages: 10,
         tls: { rejectUnauthorized: false },
         family: 4,
+        logger: true,
+        debug: true,
         lookup: (hostname, options, callback) => {
           dns.resolve4(hostname, (err, addresses) => {
             if (err || !addresses.length) return dns.lookup(hostname, { family: 4 }, callback);
