@@ -356,7 +356,7 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
       `;
 
         console.log(`[DEBUG] Puppeteer setting content for PDF generation for invoice ${invoiceNumber}`);
-        await page.setContent(pdfHtmlTemplate, { waitUntil: 'networkidle0', timeout: 60000 });
+        await page.setContent(pdfHtmlTemplate, { waitUntil: 'networkidle2', timeout: 60000 });
         const pdfUint8Array = await page.pdf({ format: 'A4', printBackground: true, timeout: 60000 });
         await browser.close();
         pdfBuffer = Buffer.from(pdfUint8Array);

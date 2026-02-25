@@ -46,6 +46,7 @@ const { invoiceQueue, connection } = require('./queue');
 const { segMiddleware } = require('./segMiddleware');
 
 const app = express();
+app.set('trust proxy', 1); // CRITICAL: Tell Express it is behind a proxy (Railway Load Balancer) to properly parse X-Forwarded-For headers
 const port = process.env.PORT || 5001;
 
 // ─── Security Middleware: Helmet ──────────────────────────────────────────────
