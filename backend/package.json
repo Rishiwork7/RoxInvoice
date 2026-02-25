@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon index.js",
     "build": "esbuild index.js --bundle --platform=node --target=node18 --minify --outfile=dist/server.js --external:puppeteer --external:bullmq --external:ioredis --external:firebase-admin --external:express",
-    "start": "node dist/server.js",
+    "start": "node --max-old-space-size=1024 dist/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

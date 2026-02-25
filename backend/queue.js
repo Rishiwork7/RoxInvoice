@@ -6,7 +6,12 @@ const puppeteer = require('puppeteer');
 
 // ─── Localhost Redis Connection ─────────────────────────────────────────────────
 const redisOptions = process.env.REDIS_URL
-  ? { tls: { rejectUnauthorized: false }, maxRetriesPerRequest: null }
+  ? {
+    tls: { rejectUnauthorized: false },
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false,
+    connectTimeout: 10000,
+  }
   : { host: '127.0.0.1', port: 6379, maxRetriesPerRequest: null };
 
 const connection = process.env.REDIS_URL
@@ -63,11 +68,15 @@ const generateInvoiceId = () =>
 // ─── SMTP Transporter ─────────────────────────────────────────────────────────
 const createTransporter = () => {
   return nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: {
       user: process.env.GMAIL_USER,
       pass: process.env.GMAIL_APP_PASSWORD,
     },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
   });
 };
 
@@ -395,8 +404,13 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         pool: true,
         maxConnections: 1,
         maxMessages: 10,
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 30000, // 30s timeout for sending the actual payload
       } : {
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
         auth: {
           user: selectedSender.email,
           pass: selectedSender.appPassword,
@@ -404,6 +418,9 @@ const emailWorker = new Worker('invoice-queue', async (job) => {
         pool: true,
         maxConnections: 1,
         maxMessages: 10,
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 30000,
       };
 
       const transporter = nodemailer.createTransport(transportConfig);

@@ -390,6 +390,45 @@ app.post('/api/preview-pdf', async (req, res) => {
   }
 });
 
-app.listen(port, '0.0.0.0', () => {
+const server = app.listen(port, '0.0.0.0', () => {
   console.log(`Backend server listening at http://0.0.0.0:${port}`);
 });
+
+// ─── Graceful Shutdown (Railway Container Recycling Hooks) ────────────────────
+const gracefulShutdown = async (signal) => {
+  console.log(`[${signal}] Received. Starting graceful shutdown sequence...`);
+
+  // 1. Stop taking new Express requests
+  server.close(async () => {
+    console.log('HTTP server closed. No longer accepting fresh API requests.');
+
+    try {
+      // 2. Pause queue & wait for active workers to complete
+      const { emailWorker } = require('./queue');
+      console.log('Closing BullMQ Worker...');
+      await emailWorker.close();
+
+      console.log('Closing BullMQ Queue Engine...');
+      await invoiceQueue.close();
+
+      console.log('Closing Redis Connections...');
+      await connection.quit();
+
+      console.log('Cleanup complete. Goodbye.');
+      process.exit(0);
+    } catch (err) {
+      console.error('Error during shutdown:', err);
+      process.exit(1);
+    }
+  });
+
+  // Force shutdown after 10s if tasks are horribly stuck
+  setTimeout(() => {
+    console.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 10000);
+};
+
+// Listen for Railway scale-down / restarts / user Ctrl+C
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
