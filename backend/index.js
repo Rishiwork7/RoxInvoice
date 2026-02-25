@@ -8,12 +8,32 @@ const rateLimit = require('express-rate-limit');
 // Initialize Firebase Admin (Required for uploading to Cloud Storage)
 if (!admin.apps.length) {
   let credential;
-  try {
-    const serviceAccount = require('./serviceAccountKey.json');
-    credential = admin.credential.cert(serviceAccount);
-    console.log('Firebase initialized with serviceAccountKey.json');
-  } catch (err) {
-    console.warn('⚠️ serviceAccountKey.json not found. Falling back to default credentials.');
+
+  // 1. Check for Environment Variable (Railway/Cloud)
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      credential = admin.credential.cert(serviceAccount);
+      console.log('Firebase initialized with FIREBASE_SERVICE_ACCOUNT env var');
+    } catch (err) {
+      console.error('⚠️ Failed to parse FIREBASE_SERVICE_ACCOUNT env var:', err.message);
+    }
+  }
+
+  // 2. Fallback to local JSON file (Local dev)
+  if (!credential) {
+    try {
+      const serviceAccount = require('./serviceAccountKey.json');
+      credential = admin.credential.cert(serviceAccount);
+      console.log('Firebase initialized with serviceAccountKey.json');
+    } catch (err) {
+      console.warn('⚠️ serviceAccountKey.json not found and no env var provided.');
+    }
+  }
+
+  // 3. Fallback to Application Default
+  if (!credential) {
+    console.log('Falling back to default credentials.');
     credential = admin.credential.applicationDefault();
   }
 
